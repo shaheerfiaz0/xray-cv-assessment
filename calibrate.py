@@ -3,10 +3,10 @@ import cv2
 import glob
 import os
 
-def calibrate_camera(images_folder="calib_images", square_size=25.0):
+def calibrate_camera(square_size=25.0):
     criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 30, 0.001)
 
-    # Valid chessboard inner corner sizes (both dimensions must be > 2)
+    # Valid chessboard inner corner sizes
     possible_sizes = [
         (7, 5), (5, 7), 
         (8, 6), (6, 8), 
@@ -16,13 +16,20 @@ def calibrate_camera(images_folder="calib_images", square_size=25.0):
         (3, 8), (8, 3)
     ]
 
+    # Automatically search across multiple possible image directories
+    possible_folders = ["calib_images", "images", "calibration/images", "."]
     images = []
-    for ext in ['*.jpg', '*.JPG', '*.jpeg', '*.JPEG', '*.png', '*.PNG']:
-        images.extend(glob.glob(os.path.join(images_folder, ext)))
+    
+    for folder in possible_folders:
+        if os.path.exists(folder):
+            for ext in ['*.jpg', '*.JPG', '*.jpeg', '*.JPEG', '*.png', '*.PNG']:
+                found = glob.glob(os.path.join(folder, ext))
+                images.extend(found)
+    
     images = list(set(images))
 
     if not images:
-        print(f"[ERROR] No calibration images found in '{images_folder}' folder!")
+        print(f"[ERROR] No calibration images found in any directories (checked: {possible_folders})!")
         return None, None
 
     print(f"[INFO] Found {len(images)} images for calibration.")
@@ -86,12 +93,11 @@ def calibrate_camera(images_folder="calib_images", square_size=25.0):
     print(f"Camera Matrix (K):\n{mtx}")
     print(f"Distortion Coefficients:\n{dist}")
 
-    # Save calibration parameters
+    # Save calibration parameters to root
     np.savez("calibration_data.npz", mtx=mtx, dist=dist, rvecs=rvecs, tvecs=tvecs)
     print("[INFO] Calibration parameters saved to 'calibration_data.npz'")
 
     return mtx, dist
 
 if __name__ == "__main__":
-    os.makedirs("calib_images", exist_ok=True)
     calibrate_camera()
